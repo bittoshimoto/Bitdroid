@@ -54,46 +54,88 @@ class _WalletViewState extends State<WalletView> {
   }
 
   LineChartData _buildChartData(List<dynamic> transactions, double? balance) {
-    final maxX = transactions.isNotEmpty ? transactions.length.toDouble() : 1.0;
-    final maxY = balance != null ? (balance * 1.1) : 1.0;
+  if (transactions.isEmpty || balance == null) {
+    print("DEBUG: No transactions or balance is null");
     return LineChartData(
       borderData: FlBorderData(show: false),
       backgroundColor: Colors.transparent,
       minX: 0.0,
-      maxX: maxX,
+      maxX: 1.0,
       minY: 0.0,
-      maxY: maxY,
-      lineBarsData: [
-        LineChartBarData(
-          spots: _generateDataPoints(transactions),
-          isCurved: false,
-          color: Color(0xFFF7931A),
-          barWidth: 2,
-          isStrokeCapRound: true,
-          dotData: const FlDotData(show: true),
-          belowBarData: BarAreaData(
-            show: true,
-            color: Colors.black,
-          ),
-        ),
-      ],
-      gridData: const FlGridData(show: false),
-      titlesData: const FlTitlesData(
-        bottomTitles: AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        leftTitles: AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        topTitles: AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-        rightTitles: AxisTitles(
-          sideTitles: SideTitles(showTitles: false),
-        ),
-      ),
+      maxY: 1.0,
+      lineBarsData: [],
     );
   }
+
+  final double maxX = transactions.length.toDouble();
+
+  // Extract amounts safely
+  List<double> amounts = transactions
+      .map((t) => (t['amount'] as num?)?.toDouble() ?? 0.0)
+      .toList();
+
+  if (amounts.isEmpty) {
+    print("DEBUG: No valid amounts found in transactions");
+    return LineChartData(
+      borderData: FlBorderData(show: false),
+      backgroundColor: Colors.transparent,
+      minX: 0.0,
+      maxX: 1.0,
+      minY: 0.0,
+      maxY: 1.0,
+      lineBarsData: [],
+    );
+  }
+
+  // Find the highest transaction ever
+  final double highestTransaction = amounts.reduce((a, b) => a > b ? a : b);
+
+  // 🔥 **Dynamic Scaling Factor** 🔥
+  // Ensures the chart always fits in the same visible area
+  final double scaleFactor = highestTransaction > 0 ? highestTransaction / 10 : 1.0;
+
+  // Apply scaling to maxY
+  double maxY = highestTransaction > 0 ? highestTransaction / scaleFactor : balance * 1.1;
+  maxY = maxY.clamp(1.0, 10.0); // Keep it within a readable range
+
+  // Adjust minY to keep smaller transactions visible
+  double minY = amounts.reduce((a, b) => a < b ? a : b) / scaleFactor;
+  minY = minY.clamp(0.0, maxY * 0.1);
+
+  print("DEBUG: maxX=$maxX, maxY=$maxY, minY=$minY, scaleFactor=$scaleFactor");
+
+  return LineChartData(
+    borderData: FlBorderData(show: false),
+    backgroundColor: Colors.transparent,
+    minX: 0.0,
+    maxX: maxX,
+    minY: minY,
+    maxY: maxY,
+    lineBarsData: [
+      LineChartBarData(
+        spots: _generateDataPoints(transactions).map((point) =>
+          FlSpot(point.x, point.y / scaleFactor) // 🔥 Apply Scaling 🔥
+        ).toList(),
+        isCurved: false,
+        color: Color(0xFFF7931A),
+        barWidth: 2,
+        isStrokeCapRound: true,
+        dotData: FlDotData(show: true),
+        belowBarData: BarAreaData(
+          show: true,
+          color: Colors.black.withOpacity(0.2),
+        ),
+      ),
+    ],
+    gridData: FlGridData(show: false),
+    titlesData: FlTitlesData(
+      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
