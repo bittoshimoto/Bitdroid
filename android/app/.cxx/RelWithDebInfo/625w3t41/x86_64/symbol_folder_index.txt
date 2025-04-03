@@ -1,0 +1,1 @@
+/home/toshimoto/Android/build/app/intermediates/cxx/RelWithDebInfo/625w3t41/obj/x86_64
