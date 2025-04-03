@@ -11,5 +11,5 @@ class Config {
   static const String getAddressTxsEndpoint = '/ext/getaddresstxs';
   static const String getTxEndpoint = '/ext/gettx';
 
-  static const String priceUrl = 'https://followthebit.org/api/';
+  static const String priceUrl = 'https://api.xeggex.com/api/v2/asset/getbyticker/B1T';
 }
