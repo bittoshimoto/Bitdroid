@@ -1,0 +1,2 @@
+/home/toshimoto/Bitroid/android/app/.cxx/RelWithDebInfo/05c3h202/x86_64/CMakeFiles/edit_cache.dir
+/home/toshimoto/Bitroid/android/app/.cxx/RelWithDebInfo/05c3h202/x86_64/CMakeFiles/rebuild_cache.dir

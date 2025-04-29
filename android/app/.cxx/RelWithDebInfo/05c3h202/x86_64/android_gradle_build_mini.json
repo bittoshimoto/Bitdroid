@@ -1,0 +1,20 @@
+{
+  "buildFiles": [
+    "/home/toshimoto/snap/flutter/common/flutter/packages/flutter_tools/gradle/src/main/groovy/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/usr/bin/ninja",
+      "-C",
+      "/home/toshimoto/Bitroid/android/app/.cxx/RelWithDebInfo/05c3h202/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/usr/bin/ninja",
+    "-C",
+    "/home/toshimoto/Bitroid/android/app/.cxx/RelWithDebInfo/05c3h202/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {}
+}
