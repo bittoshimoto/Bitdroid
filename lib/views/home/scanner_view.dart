@@ -64,8 +64,14 @@ class _ScannerViewState extends State<ScannerView> {
     controller.scannedDataStream.listen((scanData) {
       if (mounted) {
         controller.dispose();
-        Navigator.pop(context, scanData.code);
+        final rawCode = scanData.code ?? '';
+        final cleanedCode = sanitizeAddress(rawCode);
+        Navigator.pop(context, cleanedCode);
       }
     });
+  }
+
+  String sanitizeAddress(String raw) {
+    return raw.toLowerCase().startsWith('bit:') ? raw.substring(4) : raw;
   }
 }

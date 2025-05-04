@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:bit_wallet/config.dart';
 import 'package:bit_wallet/services/wallet_service.dart';
+import 'dart:async';
 
 class WalletProvider with ChangeNotifier {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
@@ -15,6 +16,7 @@ class WalletProvider with ChangeNotifier {
   String? _address;
   double? _balance = 0.0;
   List _utxos = [];
+  Timer? _balanceRefreshTimer;
 
   String? get privateKey => _privateKey;
   String? get address => _address;
@@ -29,20 +31,32 @@ class WalletProvider with ChangeNotifier {
     _privateKey = await _storage.read(key: 'key');
     if (_privateKey != null) {
       _address = _ws.loadAddressFromKey(_privateKey!);
+      await fetchUtxos();
+      _startAutoBalanceRefresh();
     }
     notifyListeners();
+  }
+
+  void _startAutoBalanceRefresh() {
+    _balanceRefreshTimer?.cancel();
+    _balanceRefreshTimer = Timer.periodic(Duration(minutes: 10), (_) async {
+      await fetchUtxos();
+    });
   }
 
   Future<void> saveWallet(String address, String privateKey) async {
     _privateKey = privateKey;
     _address = address;
     await _storage.write(key: 'key', value: privateKey);
+    await fetchUtxos();
+    _startAutoBalanceRefresh();
     notifyListeners();
   }
 
   Future<void> deleteWallet() async {
     _privateKey = null;
     _address = null;
+    _balanceRefreshTimer?.cancel();
     await _storage.delete(key: 'key');
     notifyListeners();
   }
@@ -97,12 +111,12 @@ class WalletProvider with ChangeNotifier {
     return 0.0;
   }
 
-  Future<Map<String, dynamic>?> createTransaction(String toAddress, double amount, List<Map<String, dynamic>> usedUtxosOut) async {
+  Future<Map<String, dynamic>?> createTransaction(String toAddress, double? amount, List<Map<String, dynamic>> usedUtxosOut) async {
     await fetchUtxos();
 
     const double fee = 0.0025;
     List<Map<String, dynamic>> inputs = [];
-    double totalInput = 0.0;
+    double accumulatedAmount = 0.0;
 
     for (var utxo in _utxos) {
       inputs.add({
@@ -110,19 +124,31 @@ class WalletProvider with ChangeNotifier {
         'vout': utxo['vout'],
       });
       usedUtxosOut.add(utxo);
-      totalInput += utxo['amount'];
-      if (totalInput >= amount + fee) break;
+      accumulatedAmount += utxo['amount'];
     }
 
-    if (totalInput < amount + fee) {
-      throw Exception('Insufficient funds including fee');
+    if (amount == null || amount >= accumulatedAmount) {
+      amount = accumulatedAmount;
     }
 
-    double change = totalInput - amount - fee;
-    Map<String, dynamic> outputs = { toAddress: double.parse(amount.toStringAsFixed(8)) };
+    if (amount == accumulatedAmount) {
+      if (accumulatedAmount <= fee) {
+        throw Exception('Insufficient funds to cover the fee');
+      }
+      amount -= fee;
+    } else {
+      if (accumulatedAmount < amount + fee) {
+        throw Exception('Insufficient UTXOs to cover the amount and the fee');
+      }
+    }
 
+    double change = accumulatedAmount - amount - fee;
+    amount = double.parse(amount.toStringAsFixed(8));
+    change = double.parse(change.toStringAsFixed(8));
+
+    Map<String, dynamic> outputs = { toAddress: amount };
     if (change > 0) {
-      outputs[_address!] = double.parse(change.toStringAsFixed(8));
+      outputs[_address!] = change;
     }
 
     final createRawResult = await _ws.rpcRequest('createrawtransaction', [inputs, outputs]);
@@ -166,6 +192,13 @@ class WalletProvider with ChangeNotifier {
       return {'success': false, 'message': 'Error sending transaction'};
     }
 
-    return {'success': true, 'message': 'Transaction sent successfully', 'txid': sendRawResult['result']};
+    await Future.delayed(Duration(seconds: 3));
+    await fetchUtxos();
+
+    return {
+      'success': true,
+      'message': 'Transaction sent successfully',
+      'txid': sendRawResult['result']
+    };
   }
 }

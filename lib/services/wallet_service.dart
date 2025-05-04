@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
@@ -11,6 +12,8 @@ import 'package:bit_wallet/config.dart';
 class WalletService {
   final BaseXCodec base58 =
       BaseXCodec('123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz');
+
+  Future<void> _rpcQueue = Future.value();
 
   String? generatePrivateKey() {
     String? key;
@@ -89,6 +92,21 @@ class WalletService {
   }
 
   Future<Map<String, dynamic>?> rpcRequest(String method,
+      [List<dynamic>? params]) {
+    final completer = Completer<Map<String, dynamic>?>();
+    _rpcQueue = _rpcQueue.then((_) async {
+      try {
+        final result = await _performRpcRequest(method, params);
+        completer.complete(result);
+      } catch (e) {
+        print('RPC Queue Error: $e');
+        completer.completeError(e);
+      }
+    });
+    return completer.future;
+  }
+
+  Future<Map<String, dynamic>?> _performRpcRequest(String method,
       [List<dynamic>? params]) async {
     const rpcUrl = Config.rpcUrl;
     const rpcUser = Config.rpcUser;
