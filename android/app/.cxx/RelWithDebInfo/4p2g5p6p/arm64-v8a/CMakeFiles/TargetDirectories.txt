@@ -1,0 +1,2 @@
+/home/core/Bitdroid/android/app/.cxx/RelWithDebInfo/4p2g5p6p/arm64-v8a/CMakeFiles/edit_cache.dir
+/home/core/Bitdroid/android/app/.cxx/RelWithDebInfo/4p2g5p6p/arm64-v8a/CMakeFiles/rebuild_cache.dir

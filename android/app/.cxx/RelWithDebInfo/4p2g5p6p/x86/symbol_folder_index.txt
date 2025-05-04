@@ -1,0 +1,1 @@
+/home/core/Bitdroid/build/app/intermediates/cxx/RelWithDebInfo/4p2g5p6p/obj/x86
